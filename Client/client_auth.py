@@ -18,7 +18,7 @@ usernametoken.insert(uname)
 usernametoken.insert(passwd)
 security.insert(usernametoken)
 
-url = 'http://192.168.81.136:5000/soap/someservice?wsdl'
+url = 'http://192.168.81.136:5000/poswebservices?wsdl'
 client = SudsClient(url=url, cache=None)
 client.set_options(soapheaders=security)
 
