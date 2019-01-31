@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-from flask import Flask
+from logging.handlers import RotatingFileHandler
+
+from flask import Flask, request
 from flask_spyne import Spyne
 from spyne import String
 from spyne.protocol.soap import Soap11
@@ -14,13 +16,38 @@ from Entity.PayMent import PayMent
 from Entity.ProductBarCode import ProductBarCode
 from Entity.SystemFunction import SystemFunction
 
-h = logging.StreamHandler()
-rl = logging.getLogger()
-rl.setLevel(logging.DEBUG)
-rl.addHandler(h)
+# h = logging.StreamHandler()
+# rl = logging.getLogger()
+# rl.setLevel(logging.DEBUG)
+# rl.addHandler(h)
+# from ShangYi.RequstFormatter import RequestFormatter
 
 app = Flask(__name__)
 spyne = Spyne(app)
+
+# request_data = request.data
+
+# @app.before_request
+# def log_request_info():
+#     app.logger.info('Headers: %s', request.headers)
+#     app.logger.info('Body: %s', request.get_data())
+
+
+@app.before_request
+def before_request():
+    print 'before request started'
+    print request.url
+
+
+@app.route("/log")
+def logTest():
+    app.logger.warning('testing warning log')
+    app.logger.error('testing error log')
+    app.logger.info('testing info log')
+    return "Code Handbook !! Log testing."
+
+
+
 
 
 class PosSoapService(spyne.Service):
@@ -32,6 +59,8 @@ class PosSoapService(spyne.Service):
         'username': 'myusername',
         'password': 'mypassword'  # never store passwords directly in sources!
     }
+
+
 
     @spyne.rpc(Unicode, _returns=String)
     def get_branch_result(self, braid):
@@ -62,12 +91,16 @@ class PosSoapService(spyne.Service):
 
     @spyne.rpc(Unicode, _returns=String)
     def Get_Branch_PayMent(self, branchcode):
+        app.logger.info('Get_Branch_PayMent')
         branchpayment = PayMent(branchcode)
         rst = branchpayment.get_branch_payment_all();
         return rst
 
     @spyne.rpc(Unicode, _returns=String)
     def Get_Branch_Employee_all(self, branchcode):
+        # ip = request.remote_addr
+        # app.logger.info('Get_Branch_Employee_all -%s' % ip)
+        app.logger.info('Get_Branch_Employee_all' )
         branchemployee = BranchEmployee(branchcode)
         rst = branchemployee.get_branch_employee_all()
         return rst
@@ -84,5 +117,38 @@ class PosSoapService(spyne.Service):
         rst = member.seek_memeber_by_bncid(bncid)
         return rst
 
+            # super(RequestFormatter, self).format(record)
+
 if __name__ == '__main__':
-     app.run(host='0.0.0.0',debug=True)
+    # initialize the log handler
+    # logHandler = RotatingFileHandler('info.log', maxBytes=1000, backupCount=1)
+    #
+    # # set the log handler level
+    # logHandler.setLevel(logging.DEBUG)
+    #
+    # # set the app logger level
+    # app.logger.setLevel(logging.DEBUG)
+    #
+    # app.logger.addHandler(logHandler)
+
+    app.debug = True
+    handler = logging.FileHandler('info.log', encoding='UTF-8')
+    handler.setLevel(logging.INFO)
+
+    # formatter = RequestFormatter('[%(asctime)s] %(remote_addr)s -%levelname)s in %(module)s: %(message)s')
+    # handler.setFormatter(formatter)
+    logging_format = logging.Formatter(
+        '%(asctime)-15s- %(levelname)s - %(filename)s - %(funcName)s - %(lineno)s -%(threadName)s-%(process)d-%(pathname)s- %(message)s')
+    handler.setFormatter(logging_format)
+    app.logger.addHandler(handler)
+
+
+    @app.before_request
+    def log_request_info(self):
+        app.logger.info('Headers: %s', request.headers)
+        app.logger.info('Body: %s', request.get_data())
+
+
+
+
+    app.run(host='0.0.0.0',debug=True)
