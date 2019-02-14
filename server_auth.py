@@ -13,6 +13,8 @@ from Entity.Branch import Branch
 from Entity.BranchEmployee import BranchEmployee
 from Entity.Member import Member
 from Entity.PayMent import PayMent
+from Entity.PosMachine import PosMachine
+from Entity.PosOrder import PosOrder
 from Entity.ProductBarCode import ProductBarCode
 from Entity.SystemFunction import SystemFunction
 
@@ -63,9 +65,9 @@ class PosSoapService(spyne.Service):
 
 
     @spyne.rpc(Unicode, _returns=String)
-    def get_branch_result(self, braid):
-        branch = Branch(braid)
-        rst = branch.get_remote_table_result_all()
+    def get_branch_result(self, branchcode):
+        branch = Branch(branchcode)
+        rst = branch.get_branch_all()
         return rst
 
     @spyne.rpc(Unicode, Unicode, _returns=String)
@@ -105,6 +107,15 @@ class PosSoapService(spyne.Service):
         rst = branchemployee.get_branch_employee_all()
         return rst
 
+
+    @spyne.rpc(Unicode, _returns=String)
+    def get_branch_pos_machine_all(self, branchcode):
+        app.logger.info('get_branch_pos_machine_all' )
+        posmachine = PosMachine(branchcode)
+        rst = posmachine.get_branch_pos_machine_all()
+        return rst
+
+
     @spyne.rpc(Unicode, _returns=String)
     def Get_memeber_by_mobile(self, mobile):
         member = Member()
@@ -117,7 +128,13 @@ class PosSoapService(spyne.Service):
         rst = member.seek_memeber_by_bncid(bncid)
         return rst
 
-            # super(RequestFormatter, self).format(record)
+    @spyne.rpc(Unicode, _returns=String)
+    def Pos_Submit_Order(self, transcation):
+        posorder = PosOrder()
+        rst=posorder.Submit_PosOrder(transcation)
+
+        return rst
+
 
 if __name__ == '__main__':
     # initialize the log handler

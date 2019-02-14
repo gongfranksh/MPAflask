@@ -17,7 +17,7 @@ class ProductBarCode(JsEntity):
             isnull(MainFlag,0)   MainFlag, isnull(ProFlag,0)   ProFlag, WeightFlag, Barmode, OrderMode, 
             isnull(MinOrderQty,0) MinOrderQty, isnull(OrderMultiplier,0) OrderMultiplier, FreshMode, isnull(ReturnRat,1) ReturnRat, 
             isnull(cardpoint,0)  cardpoint, status, PromtFlag, PotFlag, CanChangePrice, 
-            CreateDate, UpdateDate, isnull(vipdiscount,1) vipdiscount, posdiscount, isorder, isnull(minprice,0) minprice, isnull(maxprice,0) maxprice,
+            CreateDate, UpdateDate, isnull(vipdiscount,1) VipDisCount, isnull(posdiscount,1) posdiscount, isorder, isnull(minprice,0) minprice, isnull(maxprice,0) maxprice,
             isnull(seatid,'') seatid, maxtimestamp,isnull(guideprice,0) guideprice
             FROM dbo.v_branch_product 
                 """
