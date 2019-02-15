@@ -23,17 +23,24 @@ class PosOrder(JsEntity):
                 deviceid = trans['device_uuid']
                 transid = trans['trans_uuid']
 
+                self.braid = branch['braid']
+                self.posno = posmachine['posno']
+
+                self.tmp_saleid = self.get_current_saleid()
+
                 for order in saledaily:
                     self.insert_into_saledaily(order)
 
                 for payment in payment:
                     self.inser_into_salepayment(payment)
 
-                resultjson=[{'pos_order_submit_state':'ok',
-                            'pos_order_submit_innerid':transid,
-                            'pos_order_submit_deviceid':deviceid,
-                            }]
-                str_resultjson=json.dumps(resultjson)
+                resultjson = [{'pos_order_submit_state': 'ok',
+                               'pos_order_submit_innerid': transid,
+                               'pos_order_submit_deviceid': deviceid,
+                               'pos_order_return_saleid': self.tmp_saleid,
+                               }]
+
+                str_resultjson = json.dumps(resultjson)
 
         except Exception as e:
             print(e.message)
@@ -42,21 +49,51 @@ class PosOrder(JsEntity):
 
         return str_resultjson
 
+    #产生交易流水编号
+    def get_current_saleid(self):
+
+        #获取当日门店同一个收银机最后一笔正常交易号码
+        sql = """
+                SELECT saleid
+                FROM mobile_sale_daily
+                WHERE id IN (
+                    SELECT MAX(id)
+                    FROM mobile_sale_daily
+                    WHERE BraId = '{0}'
+                        AND PosNo = '{1}'
+                        AND substring(saleid,1,1)!='R'
+                        AND datediff(day, saledate, getdate()) = 0
+                )        
+            """
+        sql = sql.format(self.braid, self.posno)
+
+        #最后流水4位，取1000 截取后四位
+        seq_number = 10000
+
+        rst = self.get_remote_list_by_sql(sql)
+
+        #如果有记录，流水加一，否则从一开始计算
+        if len(rst) == 1:
+            seq_number += int(rst[0]["saleid"][-4:])
+
+        tmp_saleid = self.posno + time.strftime('%y%m%d', time.localtime(time.time())) + str(seq_number + 1)[-4:]
+        return tmp_saleid
+
     def inser_into_salepayment(self, paymentbean):
         uploadtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
-        tmp_saleid=''
-        tmp_cardtype=''
-        tmp_cardno=''
+        tmp_saleid = ''
+        tmp_cardtype = ''
+        tmp_cardno = ''
 
-        if paymentbean.has_key('SaleId'):
-            tmp_saleid=paymentbean['SaleId']
+        # if paymentbean.has_key('SaleId'):
+        #     tmp_saleid=paymentbean['SaleId']
 
         if paymentbean.has_key('cardtype'):
-            tmp_cardtype=paymentbean['cardtype']
+            tmp_cardtype = paymentbean['cardtype']
 
         if paymentbean.has_key('cardno'):
-            tmp_cardno=paymentbean['cardno']
+            tmp_cardno = paymentbean['cardno']
 
         insert_statment = """
             INSERT INTO dbo.mobile_sale_paymode (
@@ -69,10 +106,11 @@ class PosOrder(JsEntity):
             )
         """
 
-        insert_statment= insert_statment.format(
-            paymentbean['Braid'],paymentbean['SaleDate'],tmp_saleid,paymentbean['SalerId'],paymentbean['PayModeId'],
-            paymentbean['PayMoney'],tmp_cardtype, tmp_cardno,uploadtime,
-            paymentbean['OrderInnerId'],paymentbean['DeviceId']
+        insert_statment = insert_statment.format(
+            paymentbean['Braid'], paymentbean['SaleDate'], self.tmp_saleid, paymentbean['SalerId'],
+            paymentbean['PayModeId'],
+            paymentbean['PayMoney'], tmp_cardtype, tmp_cardno, uploadtime,
+            paymentbean['OrderInnerId'], paymentbean['DeviceId']
         )
         self.execSql(insert_statment)
         # print insert_statment
@@ -122,8 +160,8 @@ class PosOrder(JsEntity):
         if orderbean.has_key('LastCostPrice'):
             tmp_LastCostPrice = orderbean['LastCostPrice']
 
-        if orderbean.has_key('SaleId'):
-            tmp_SaleId = orderbean['SaleId']
+        # if orderbean.has_key('SaleId'):
+        #     tmp_SaleId = orderbean['SaleId']
 
         if orderbean.has_key('MemCardNo'):
             tmp_MemCardNo = orderbean['MemCardNo']
@@ -159,7 +197,7 @@ class PosOrder(JsEntity):
             tmp_IsDM, tmp_IsPmt, tmp_IsTimePrompt, orderbean['SaleTax'], orderbean['PosNo'],
             orderbean['SalerId'], orderbean['SaleMan'], tmp_SaleType, orderbean['SaleQty'], orderbean['SaleAmt'],
             tmp_SaleDisAmt, tmp_TransDisAmt, orderbean['NormalPrice'], orderbean['CurPrice'], tmp_AvgCostPrice,
-            tmp_LastCostPrice, tmp_SaleId, tmp_MemCardNo, tmp_InvoiceId, tmp_Points1,
+            tmp_LastCostPrice, self.tmp_saleid, tmp_MemCardNo, tmp_InvoiceId, tmp_Points1,
             tmp_Points2, tmp_ReturnRat,
             orderbean['Cash1'], orderbean['Cash2'], orderbean['Cash3'], orderbean['Cash4'], orderbean['Cash5'],
             orderbean['Cash6'], orderbean['Cash7'], orderbean['Cash8'],
